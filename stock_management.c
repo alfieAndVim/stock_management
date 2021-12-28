@@ -70,11 +70,10 @@ void createTable(sqlite3 *db){
     printf("\nTables configured successfully\n");
 }
 
+/*Prints all categories out to the user from the showCategories query function*/
 int categoryCallback(void *unused, int numOfCols, char **fields, char **colNames){
 
     int i;
-
-    char array[7][20];
 
     for(i=0; i<numOfCols; i++){
 
@@ -87,6 +86,7 @@ int categoryCallback(void *unused, int numOfCols, char **fields, char **colNames
     return 0;
 }
 
+/*Performs a query for all categories on the category table*/
 int showCategories(sqlite3 *db){
 
     printf("Category options\n");
@@ -105,6 +105,7 @@ int showCategories(sqlite3 *db){
     return 0;
 }
 
+/*Gets the category id associated with a specific category name*/
 int getCategoryID(sqlite3 *db, char *categoryName){
 
     char *errMsg = 0;
@@ -117,6 +118,9 @@ int getCategoryID(sqlite3 *db, char *categoryName){
     if(rc != SQLITE_OK){
         printf("SQL error: %s\n", errMsg);
         sqlite3_free(errMsg);
+
+        return 99;
+
     } else {
 
         int done = 0;
@@ -146,6 +150,148 @@ int getCategoryID(sqlite3 *db, char *categoryName){
 
 }
 
+struct product{
+
+    char name[20];
+    int productID;
+    int categoryID;
+    double price;
+    double quantity;
+};
+
+char * getCategory(sqlite3 *db, int productID){
+
+    char category[20];
+
+    char *errMsg = 0;
+    sqlite3_stmt *res;
+
+    char query[128];
+
+    sprintf(query, "SELECT ")
+}
+
+int readAllStock(sqlite3 *db){
+
+    char *errMsg = 0;
+    sqlite3_stmt *res;
+
+    char *query = "SELECT * FROM PRODUCT";
+
+    int rc = sqlite3_prepare_v2(db, query, -1, &res, 0);
+
+    if(rc != SQLITE_OK){
+
+        printf("SQL error: %s\n", errMsg);
+        sqlite3_free(errMsg);
+    
+    } else {
+
+        int done = 0;
+
+        while(!done){
+
+            int step = sqlite3_step(res);
+
+            if(step == SQLITE_ROW){
+                printf("ProductID %d   ", sqlite3_column_int(res, 0));
+                printf("Name %s   ", sqlite3_column_text(res, 1));
+                printf("Price %s    ", sqlite3_column_text(res, 2));
+                printf("Quantity %s    ", sqlite3_column_text(res, 3));
+                printf("\n");
+            } else {
+                done = 1;
+            }
+        }
+    }
+
+
+
+    return 0;
+}
+
+int insertData(sqlite3 *db, struct product tempProduct){
+
+    printf("Name: %s, CategoryID: %d, Price: %g, Quantity: %g\n", tempProduct.name, tempProduct.categoryID, tempProduct.price, tempProduct.quantity);
+
+    char name[20];
+    int productID;
+    int categoryID;
+    double price;
+    double quantity;
+
+    strcpy(name, tempProduct.name);
+    productID = tempProduct.productID;
+    categoryID = tempProduct.categoryID;
+    price = tempProduct.price;
+    quantity = tempProduct.quantity;
+
+    char *errMsg = 0;
+    char data[128];
+
+    /*Adding data to the product table*/
+    sprintf(data, "INSERT INTO PRODUCT VALUES('%d', '%s', '%lf', '%lf')", productID, name, price, quantity);
+
+    int rc = sqlite3_exec(db, data, 0, 0, &errMsg);
+
+    if(rc != SQLITE_OK){
+        printf("\n%s\n", sqlite3_errmsg(db));
+        sqlite3_free(errMsg);
+    } else {
+        printf("Data added successfully\n");
+    }
+
+    /*Adding data to the productCat table*/
+    char productCatData[128];
+
+    sprintf(productCatData, "INSERT INTO PRODUCT_CAT VALUES('%d', '%d')", productID, categoryID);
+
+    rc = sqlite3_exec(db, productCatData, 0, 0, &errMsg);
+
+    if(rc != SQLITE_OK){
+        printf("\n%s\n", sqlite3_errmsg(db));
+        sqlite3_free(errMsg);
+    } else {
+        printf("Data added successfully\n");
+    }
+
+    return 0;
+}
+
+int getLastID(sqlite3 *db){
+
+    char *errMsg = 0;
+    sqlite3_stmt *res;
+    char *query = "SELECT productID FROM PRODUCT";
+
+    int rc = sqlite3_prepare_v2(db, query, -1, &res, 0);
+
+    if(rc != SQLITE_OK){
+        printf("SQL error: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        
+        return -1;
+
+    } else {
+        int done = 0;
+        int lastID = -1;
+
+        while(!done){
+
+            int step = sqlite3_step(res);
+
+            if(step == SQLITE_ROW){
+                lastID = sqlite3_column_int(res, 1);
+            } else {
+                done = 1;
+            }
+        }
+
+        return lastID;
+    }
+
+}
+
 int addStock(sqlite3 *db){
 
     char name[20];
@@ -166,7 +312,7 @@ int addStock(sqlite3 *db){
         fgets(category, 20, stdin);
         category[strcspn(category, "\n")] = 0;
         categoryID = getCategoryID(db, category);
-    } while((categoryID > 5) || (categoryID < 0));
+    } while(categoryID == 99);
     
 
     do{
@@ -186,6 +332,24 @@ int addStock(sqlite3 *db){
     } while (input != 1);
 
     printf("\nYou have chosen to add %g %s at a price of %g under the category %s\n", quantity, name, price, category);
+
+    printf("The next id is %d\n", getLastID(db) + 1);
+
+    struct product tempProduct;
+
+    name[strcspn(name, "\n")] = 0;
+
+    strcpy(tempProduct.name, name);
+    tempProduct.productID = getLastID(db) + 1;
+    tempProduct.categoryID = categoryID;
+    tempProduct.price = price;
+    tempProduct.quantity = quantity;
+
+    insertData(db, tempProduct);
+
+    return 0;
+
+
 }
 
 int clearCategories(sqlite3* db){
@@ -302,6 +466,7 @@ void main(){
             case 5:
                 printf("View Entire Stock\n");
                 printf("----------------------------------\n");
+                readAllStock(initialisation);
                 break;
             case 6:
                 printf("Exit the Program\n");
