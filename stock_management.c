@@ -11,10 +11,12 @@
 sqlite3 *initialiseDatabase(){
 
     sqlite3 *db;
+    /*Holds the error message that is used in the event of an error when executing sqlite command*/
     char *errMsg = 0;
 
     int rc = sqlite3_open("stock_data.db", &db);
     if (rc != SQLITE_OK) {
+        /*SQLITE_OK is an integer variable that is held as part of the sqlite library this represents a successful sqlite execution*/
         printf("\n\nThe database has not been initialised successfully\n\n");
         printf("\n%s\n", sqlite3_errmsg(db));
     } else {
@@ -37,11 +39,12 @@ int createTable(sqlite3 *db){
     char *data = "CREATE TABLE IF NOT EXISTS PRODUCT(productID INTEGER PRIMARY KEY, name TEXT, price REAL, quantity REAL);";
 
     int rc = sqlite3_exec(db, data, 0, 0, &errMsg);
+   /*follows the structure of database, sqlite command, callback function (optional), pointer variable (optional), error message variable pointer (optional)*/
 
     if(rc != SQLITE_OK) {
 
         printf("\n%s\n", sqlite3_errmsg(db));
-        sqlite3_free(errMsg);
+        sqlite3_free(errMsg);/*sqlite library command to free up the error message from dynamic memory*/
 
         return 1;
     }
@@ -52,6 +55,7 @@ int createTable(sqlite3 *db){
     data = productCatData;
     
     rc = sqlite3_exec(db, data, 0, 0, &errMsg);
+    
 
     if(rc != SQLITE_OK) {
         printf("\n%s\n", sqlite3_errmsg(db));
@@ -85,7 +89,7 @@ int createTable(sqlite3 *db){
 int getLastID(sqlite3 *db){
 
     char *errMsg = 0;
-    sqlite3_stmt *res;
+    sqlite3_stmt *res;/*Variable to hold the result of the query*/
     char *query = "SELECT productID FROM PRODUCT";
 
     int rc = sqlite3_prepare_v2(db, query, -1, &res, 0);
@@ -97,15 +101,20 @@ int getLastID(sqlite3 *db){
         return -1;
 
     } else {
+        /*If the execution was successful the function will step through the query*/
         int done = 0;
         int lastID = -1;
+        /*lastID set to -1 variable to hold the last identifier*/
 
         while(!done){
 
+            /*step variable checks that the loop has not reached the end of the query*/
             int step = sqlite3_step(res);
 
             if(step == SQLITE_ROW){
+                /*SQLITE_ROW indicates a new row of the query still exists*/
                 lastID = sqlite3_column_int(res, 0);
+                /*Retrieves the first column (productID) as an integer*/
             } else {
                 done = 1;
             }
@@ -116,24 +125,32 @@ int getLastID(sqlite3 *db){
 
 }
 
+/*Function to convert a string into a long integer*/
 long int strToInt(char *string){
 
     long int temp;
 
+    /*strcspn removes the newline character from any inputted string*/
     string[strcspn(string, "\n")] = 0;
-    temp = strtol(string, NULL, 10);
+    /*strtol function to return long integer from string*/
+    temp = strtol(string, NULL, 10); /*Follows the structure of string_input, pointer (optional), base value for integer*/
 
     return temp;
 }
 
+/*Function to check that the user has inputted an integer, takes in a string*/
 int intCheck(char *string){
 
+    /*variable to hold counter for for loop*/
     int i;
+    /*Variable to hold result from function*/
     int success = 0;
+    /*variable to hold the length of the string (result of strlen function)*/
     int length = strlen(string);
 
     for(i=0; i<length; i++){
 
+        /*isDigit inbuilt function, executed for each digit inside the string, returns positive integer if the string character is an integer*/
         if(isdigit(string[i]) > 0){
 
             success = 1;
@@ -145,33 +162,46 @@ int intCheck(char *string){
     return success;
 }
 
+/*Function to return a long double value from a string*/
 long double strToDbl(char *string){
 
+    /*Temporary variable to hold double value*/
     long double temp;
 
+    /*Removes newline character from string*/
     string[strcspn(string, "\n")] = 0;
+    /*Converts string to double value with inbuilt function*/
     temp = strtod(string, NULL);
 
     return temp;
 }
 
+/*Function to check that a string is a double*/
 int doubleCheck(char *string){
 
+    /*Temporary variable to hold counter for for loop*/
     int i;
+    /*Variable to hold the result of the function*/
     int success = 0;
+    /*Variable to hold the length of the inputted string*/
     int length = strlen(string);
 
+    /*A counter used to keep track of the amount of decimal points in the string*/
     int stopCount = 0;
 
+    /*Iterates over the string*/
     for(i=0; i<length; i++){
-
+    
+        /*Checks that character is a digit or a decimal point*/
         if((isdigit(string[i]) > 0) || (string[i] == '.')){
 
             success = 1;
             if(string[i] == '.'){
+                /*Increments decimal point counter when detected*/
                 stopCount += 1;
             }
 
+            /*Checks that no more than one decimal point exists*/
             if(stopCount > 1){
                 return 0;
             }
@@ -190,7 +220,9 @@ int categoryCallback(void *unused, int numOfCols, char **fields, char **colNames
 
     for(i=0; i<numOfCols; i++){
 
+        /*Checks that the field is not empty*/
        if(fields[i] != NULL){
+           /*Prints the fields name*/
            printf("%s   ", fields[i]);
        }
     }
@@ -206,10 +238,13 @@ int showCategories(sqlite3 *db){
 
     char *errMsg = 0;
 
+    /*Query to get */
     char *query = "SELECT name FROM CATEGORY";
 
+    /*Execution command for sqlite, uses the categoryCallback function to print results*/  
     int rc = sqlite3_exec(db, query, categoryCallback, 0, &errMsg);
 
+    /*Catches error then clears error from dynamic memory*/
     if(rc != SQLITE_OK){
         printf("SQL error: %s\n", errMsg);
         sqlite3_free(errMsg);
@@ -222,6 +257,7 @@ int showCategories(sqlite3 *db){
 int getCategoryID(sqlite3 *db, char *categoryName){
 
     char *errMsg = 0;
+    /*res refers to the result of the sqlite execution and is specified of type sqlite3_stmt*/
     sqlite3_stmt *res;
 
     char *query = "SELECT * FROM CATEGORY";
@@ -231,7 +267,8 @@ int getCategoryID(sqlite3 *db, char *categoryName){
     if(rc != SQLITE_OK){
         printf("SQL error: %s\n", errMsg);
         sqlite3_free(errMsg);
-
+        
+        /*Returns 99 refers to no category being found*/
         return 99;
 
     } else {
@@ -239,11 +276,13 @@ int getCategoryID(sqlite3 *db, char *categoryName){
         int done = 0;
         int categoryID = 99;
 
+        /*Program will iterate over the query until a new row is no longer found in which case the query has been complete*/
         while(!done){
 
             int step = sqlite3_step(res);
 
             if(step == SQLITE_ROW){
+                /*compares category name from user with category name from query, matches associated categoryID*/
                 if(strcmp(categoryName, sqlite3_column_text(res, 1)) == 0){
                     categoryID = sqlite3_column_int(res, 0);
                 }
@@ -253,6 +292,7 @@ int getCategoryID(sqlite3 *db, char *categoryName){
             }
         }
 
+        /*Used when a command has been completely utilised, frees memory in particular*/
         sqlite3_finalize(res);
 
         return categoryID;
@@ -276,6 +316,7 @@ struct product{
 /*Returns the category name of a product given its productID (primary key of product table)*/
 char * getCategory(sqlite3 *db, int productID){
 
+    /*Allocates a block of memory for the category variable*/
     char *category = malloc(sizeof(char) * 20);
 
     char *errMsg = 0;
@@ -283,6 +324,7 @@ char * getCategory(sqlite3 *db, int productID){
 
     char query[130];
 
+    /*copies the query command into the query variable*/
     sprintf(query, "SELECT CATEGORY.name FROM CATEGORY, PRODUCT_CAT WHERE CATEGORY.categoryID = PRODUCT_CAT.categoryID AND PRODUCT_CAT.productID = ?");
 
     int rc = sqlite3_prepare_v2(db, query, -1, &res, 0);
@@ -294,12 +336,14 @@ char * getCategory(sqlite3 *db, int productID){
     
     } else {
 
+        /*Binding statement, uses question marks in the query statement to denote the locations where variables should be added, eg productID variable goes in the query at PRODUCT_CAT.productID = ?*/
         sqlite3_bind_int(res, 1, productID);
 
         int done = 0;
 
         while(!done){
 
+            /*steps through the query row by row*/
             int step = sqlite3_step(res);
 
             if(step == SQLITE_ROW){
@@ -324,6 +368,7 @@ int readStockByName(sqlite3 *db){
     fgets(name, 100, stdin);
     name[strcspn(name, "\n")] = 0;
 
+    /*Used to signify that the user wants to return to the main menu*/
     if(((strcmp(name, "q")) == 0) || ((strcmp(name, "Q")) == 0)){
             return 1;
         }
@@ -335,6 +380,7 @@ int readStockByName(sqlite3 *db){
 
     char query[300];
 
+    /*DISTINCT is a command in sqlite which prevents duplications in queries*/
     sprintf(query, "SELECT DISTINCT PRODUCT.productID, PRODUCT.name, PRODUCT.quantity, PRODUCT.price, PRODUCT_CAT.categoryID FROM PRODUCT, PRODUCT_CAT WHERE PRODUCT.productID = PRODUCT_CAT.productID AND PRODUCT.name = ?");
 
     int rc = sqlite3_prepare_v2(db, query, -1, &res, 0);
@@ -346,6 +392,7 @@ int readStockByName(sqlite3 *db){
 
     } else {
 
+        /*Binds name to the first question mark location*/
         sqlite3_bind_text(res, 1, name, -1, NULL);
 
         int done = 0;
@@ -356,11 +403,12 @@ int readStockByName(sqlite3 *db){
 
             if(step == SQLITE_ROW){
 
+                /*sqlite3_column_text(result_variable, column_number)*/
                 printf("%s  ", sqlite3_column_text(res, 0));
                 printf("Name:   %s  ", sqlite3_column_text(res, 1));
                 printf("Quantity:   %s  ", sqlite3_column_text(res, 2));
                 printf("Price:  %s  ", sqlite3_column_text(res, 3));
-                printf("Category:   %s  ", getCategory(db, sqlite3_column_int(res, 4)));
+                printf("Category:   %s  ", getCategory(db, sqlite3_column_int(res, 0)));
                 printf("\n");
             
             } else {
@@ -384,12 +432,14 @@ int readStockByCategory(sqlite3 *db){
     do{
         printf("Please enter the category you wish to search for:   ");
         fgets(category, 200, stdin);
+        /*Removes new line from string*/
         category[strcspn(category, "\n")] = 0;
 
         if(((strcmp(category, "q")) == 0) || ((strcmp(category, "Q")) == 0)){
             return 1;
         }
 
+        /*Will inform the user of an incorrect category being chosen*/
         if(getCategoryID(db, category) == 99){
             printf("Please make sure that you have chosen a listed category\n");
         } else {
@@ -416,6 +466,7 @@ int readStockByCategory(sqlite3 *db){
     
     } else {
 
+        /*Binds the categoryID variable to the categoryID value in the category table*/
         sqlite3_bind_int(res, 1, categoryID);
 
         int done = 0;
@@ -684,6 +735,7 @@ int changeProductCategory(sqlite3 *db, int id, int categoryID){
     return 0;
 }
 
+/*Function will compare a given productID with the productId within the product table and the product_cat table, then the matching stock item */
 int deleteStock(sqlite3 *db, int id){
 
 
@@ -712,6 +764,7 @@ int deleteStock(sqlite3 *db, int id){
         success = 1;
     }
 
+    /*product will exist in both the product and product_cat table and therefore must be deleted from both*/
     sprintf(query, "DELETE FROM PRODUCT_CAT WHERE productID = %d", id);
 
     rc = sqlite3_exec(db, query, 0, 0, &errMsg);
@@ -719,6 +772,7 @@ int deleteStock(sqlite3 *db, int id){
     if(rc != SQLITE_OK){
 
         printf("SQL error:  %s\n", errMsg);
+        /*frees error message from dynamic memory*/
         sqlite3_free(errMsg);
 
         success = 0;
@@ -744,9 +798,11 @@ int deleteStock(sqlite3 *db, int id){
 int modifyStock(sqlite3 *db){
 
     printf("All stock items\n\n");
+    /*All stock items will be displayed alongside their ID's*/
     readAllStock(db);
     printf("\n");
 
+    /*Temporary user choice refers to the string variable, user choice refers to the long integer counterpart created using strToInt*/
     long int userChoiceID;
     char tempUserChoiceID[10];
 
@@ -754,7 +810,7 @@ int modifyStock(sqlite3 *db){
     do{
         
         printf("Please enter the number for the stock item you wish to modify:  ");
-        
+        /*Algorithm will first check that the string is in fact an integer, then it will check that the integer relates to a valid stock item*/
         fgets(tempUserChoiceID, 10, stdin);
         tempUserChoiceID[strcspn(tempUserChoiceID, "\n")] = 0;
         if(!(intCheck(tempUserChoiceID))){
@@ -789,7 +845,7 @@ int modifyStock(sqlite3 *db){
 
     do{
         printf("\nPlease select an option to proceed:     ");
-        
+        /*checks for integer validation and that the integer relates to a menu item*/
         fgets(tempUserChoice, 10, stdin);
         tempUserChoice[strcspn(tempUserChoice, "\n")] = 0;
         if(!(intCheck(tempUserChoice))){
@@ -812,8 +868,10 @@ int modifyStock(sqlite3 *db){
     char category[50];
     char delete[3];
 
+    /*switch case statement to manange the submenu for modifying a stock*/
     switch(userChoice){
-
+        
+        /*Menu option to change the name of a stock item*/
         case 1:
 
             printf("You have selected to change the name\n\n");
@@ -829,6 +887,7 @@ int modifyStock(sqlite3 *db){
 
             return 0;
 
+        /*Menu option to change the price of a stock item*/
         case 2:
 
             input = 0;
@@ -853,6 +912,7 @@ int modifyStock(sqlite3 *db){
 
             return 0;
 
+        /*Menu option to change the quantity of a stock item*/
         case 3:
 
             input = 0;
@@ -875,6 +935,7 @@ int modifyStock(sqlite3 *db){
 
             return 0;
 
+        /*Menu option to change the category of a stock item*/
         case 4:
 
             printf("You have selected to change the category\n\n");
@@ -896,12 +957,14 @@ int modifyStock(sqlite3 *db){
             
             return 0;
 
+        /*Menu option to remove a stock item*/
         case 5:
 
             input = 0;
             printf("You have selected to remove the stock\n\n");
 
             do{
+                /*Checks with the user that they in fact do want to delete an item*/
                 printf("Warning, this modification is irreversible, are you sure you want to proceed [Y/n] ");
                 fgets(delete, 2, stdin);
                 getchar();
@@ -1013,11 +1076,13 @@ int addStock(sqlite3 *db){
     printf("Please enter the name of the product  ");
     fgets(name, 20, stdin);
     name[strcspn(name, "\n")] = 0;
-
+    
+    /*Used to denote that the user wants to return back to the main menu*/
     if(((strcmp(name, "q")) == 0) || ((strcmp(name, "Q")) == 0)){
             return 1;
         }
 
+    /*presents the categories to the user*/
     showCategories(db);
 
     do{
@@ -1058,8 +1123,6 @@ int addStock(sqlite3 *db){
 
     printf("\nYou have chosen to add %Lf %s at a price of %Lf under the category %s\n", quantity, name, price, category);
 
-    printf("The next id is %d\n", getLastID(db) + 1);
-
     struct product tempProduct;
 
     name[strcspn(name, "\n")] = 0;
@@ -1073,10 +1136,8 @@ int addStock(sqlite3 *db){
     insertData(db, tempProduct);
 
     return 0;
-
-
+    
 }
-
 /*A function to clear the Category table when the program starts up*/
 int clearCategories(sqlite3* db){
 
@@ -1136,11 +1197,14 @@ int setCategories(sqlite3* db){
 /*Main function which displays the menu that the user can use the navigate through the program*/
 void main(){
 
-
+    /*initialises the database*/
     sqlite3 *initialisation = initialiseDatabase();
+    /*creates all three tables within the database*/
     createTable(initialisation);
+    /*Writes the categories from the 'categories.txt' file to the categories table*/
     setCategories(initialisation);
     
+    /*Variable to hold whether the user has exited the program or not*/
     bool exited = false;
 
     while(!exited){
