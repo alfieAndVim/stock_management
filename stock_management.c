@@ -317,12 +317,12 @@ struct product{
 char * getCategory(sqlite3 *db, int productID){
 
     /*Allocates a block of memory for the category variable*/
-    char *category = malloc(sizeof(char) * 20);
+    char *category = malloc(sizeof(char) * 40);
 
     char *errMsg = 0;
     sqlite3_stmt *res;
 
-    char query[130];
+    char query[300];
 
     /*copies the query command into the query variable*/
     sprintf(query, "SELECT CATEGORY.name FROM CATEGORY, PRODUCT_CAT WHERE CATEGORY.categoryID = PRODUCT_CAT.categoryID AND PRODUCT_CAT.productID = ?");
@@ -347,7 +347,7 @@ char * getCategory(sqlite3 *db, int productID){
             int step = sqlite3_step(res);
 
             if(step == SQLITE_ROW){
-                strcpy(category, sqlite3_column_text(res, 0));
+                strncpy(category, sqlite3_column_text(res, 0), 40);
             
             } else {
                 done = 1;
@@ -362,11 +362,19 @@ char * getCategory(sqlite3 *db, int productID){
 int readStockByName(sqlite3 *db){
 
 
-    char name[100];
+    char name[25];
 
     printf("Please enter the name you wish to search for:   ");
-    fgets(name, 100, stdin);
+    fgets(name, 20, stdin);
     name[strcspn(name, "\n")] = 0;
+
+    if(strlen(name) == 19){
+        printf("Search has been truncated to %s\n", name);
+        int ch;
+        do {
+            ch = getchar();
+        } while(ch != '\n');
+    }
 
     /*Used to signify that the user wants to return to the main menu*/
     if(((strcmp(name, "q")) == 0) || ((strcmp(name, "Q")) == 0)){
@@ -427,16 +435,24 @@ int readStockByCategory(sqlite3 *db){
 
     showCategories(db);
 
-    char category[200];
+    char category[25];
 
     do{
         printf("Please enter the category you wish to search for:   ");
-        fgets(category, 200, stdin);
+        fgets(category, 20, stdin);
         /*Removes new line from string*/
         category[strcspn(category, "\n")] = 0;
 
         if(((strcmp(category, "q")) == 0) || ((strcmp(category, "Q")) == 0)){
             return 1;
+        }
+
+        if(strlen(category) == 19){
+            printf("Search has been truncated to %s\n", category);
+            int ch;
+            do{
+                ch = getchar();
+            } while(ch != '\n');
         }
 
         /*Will inform the user of an incorrect category being chosen*/
@@ -815,6 +831,7 @@ int modifyStock(sqlite3 *db){
         tempUserChoiceID[strcspn(tempUserChoiceID, "\n")] = 0;
         if(!(intCheck(tempUserChoiceID))){
             input = 0;
+            printf("Please check your input\n");
         } else {
             input = 1;
             userChoiceID = strToInt(tempUserChoiceID);
@@ -823,6 +840,12 @@ int modifyStock(sqlite3 *db){
             } else {
                 input = 0;
             }
+        }
+        if(strlen(tempUserChoiceID) == 9){
+            int ch;
+            do {
+                ch = getchar();
+            } while(ch != '\n');
         }
         
         
@@ -850,6 +873,12 @@ int modifyStock(sqlite3 *db){
         tempUserChoice[strcspn(tempUserChoice, "\n")] = 0;
         if(!(intCheck(tempUserChoice))){
             input = 0;
+            if(strlen(tempUserChoice) == 9){
+                int ch;
+                do{
+                    ch = getchar();
+                } while(ch != '\n');
+            }
         } else {
             input = 1;
             userChoice = strToInt(tempUserChoice);
@@ -860,12 +889,12 @@ int modifyStock(sqlite3 *db){
         
     } while(input != 1);
 
-    char name[50];
+    char name[25];
     long double price;
     char tempPrice[10];
     long double quantity;
     char tempQuantity[10];
-    char category[50];
+    char category[25];
     char delete[3];
 
     /*switch case statement to manange the submenu for modifying a stock*/
@@ -876,9 +905,17 @@ int modifyStock(sqlite3 *db){
 
             printf("You have selected to change the name\n\n");
             printf("Please give the name that you would like to change the product to:  ");
-            fgets(name, 50, stdin);
+            fgets(name, 20, stdin);
             name[strcspn(name, "\n")] = 0;
 
+            if(strlen(name) == 19){
+                printf("Name has been truncated to %s\n", name);
+                int ch;
+                do {
+                    ch = getchar();
+                } while(ch != '\n');
+            }
+    
             if(((strcmp(name, "q")) == 0) || ((strcmp(name, "Q")) == 0)){
                 return 1;
             }
@@ -900,6 +937,13 @@ int modifyStock(sqlite3 *db){
                 tempPrice[strcspn(tempPrice, "\n")] = 0;
                 if(!(doubleCheck(tempPrice))){
                     input = 0;
+                    if(strlen(tempPrice) == 9){
+                        int ch;
+                        do {
+                            ch = getchar();
+                        } while(ch != '\n');
+                    }
+                    printf("Please check your input\n");
                 
                 } else {
                     price = strToDbl(tempPrice);
@@ -924,6 +968,14 @@ int modifyStock(sqlite3 *db){
                 tempQuantity[strcspn(tempQuantity, "\n")] = 0;
                 if(!(doubleCheck(tempQuantity))){
                     input = 0;
+                    if(strlen(tempQuantity) == 9){
+                        int ch;
+                        do {
+                            ch = getchar();
+                        } while(ch != '\n');
+                    }
+                    printf("Please check your input\n");
+
                 } else {
                     quantity = strToDbl(tempQuantity);
                     input = 1;
@@ -944,8 +996,15 @@ int modifyStock(sqlite3 *db){
                 printf("Please enter the new category of the stock product:   ");
                 printf("Category options\n\n");
                 showCategories(db);
-                fgets(category, 50, stdin);
+                fgets(category, 20, stdin);
                 category[strcspn(category, "\n")] = 0;
+
+                if(strlen(category) == 19){
+                    int ch;
+                    do {
+                        ch = getchar();
+                    } while(ch != '\n');
+                }
 
                 if(getCategoryID(db, category) == 99){
                     printf("Please make sure to choose an available category\n");
@@ -1004,20 +1063,20 @@ int insertData(sqlite3 *db, struct product tempProduct){
 
     printf("Name: %s, CategoryID: %d, Price: %g, Quantity: %g\n", tempProduct.name, tempProduct.categoryID, tempProduct.price, tempProduct.quantity);
 
-    char name[20];
+    char name[200];
     int productID;
     int categoryID;
     double price;
     double quantity;
 
-    strcpy(name, tempProduct.name);
+    strncpy(name, tempProduct.name, sizeof(name));
     productID = tempProduct.productID;
     categoryID = tempProduct.categoryID;
     price = tempProduct.price;
     quantity = tempProduct.quantity;
 
     char *errMsg = 0;
-    char data[128];
+    char data[300];
 
     int success = 0;
 
@@ -1063,8 +1122,8 @@ int insertData(sqlite3 *db, struct product tempProduct){
 /*Handles the user interaction for adding stock to the database*/
 int addStock(sqlite3 *db){
 
-    char name[20];
-    char category[20];
+    char name[25];
+    char category[25];
     int categoryID;
     long double price;
     char tempPrice[10];
@@ -1077,6 +1136,15 @@ int addStock(sqlite3 *db){
     fgets(name, 20, stdin);
     name[strcspn(name, "\n")] = 0;
     
+    if(strlen(name) == 19){
+        int ch;
+        do {
+            ch = getchar();
+        } while(ch != '\n');
+
+        printf("Name has been truncated to %s \n", name);
+    }
+
     /*Used to denote that the user wants to return back to the main menu*/
     if(((strcmp(name, "q")) == 0) || ((strcmp(name, "Q")) == 0)){
             return 1;
@@ -1090,17 +1158,33 @@ int addStock(sqlite3 *db){
         fgets(category, 20, stdin);
         category[strcspn(category, "\n")] = 0;
         categoryID = getCategoryID(db, category);
+        if(strlen(category) == 19){
+            int ch;
+            do {
+                ch = getchar();
+            } while(ch != '\n');
+        }
+        if(categoryID == 99){
+            printf("Please check your input \n");
+        }
     } while(categoryID == 99);
     
 
     input = 0;
 
     do{
-        printf("Please enter the price for the %s ", name);
+        printf("Please enter the price for the  %s ", name);
         fgets(tempPrice, 10, stdin);
         tempPrice[strcspn(tempPrice, "\n")] = 0;
         if(!(doubleCheck(tempPrice))){
             input = 0;
+            if(strlen(tempPrice) == 9){
+                int ch;
+                do {
+                    ch = getchar();
+                } while(ch != '\n');
+            }
+            printf("Please check your input \n");
         
         } else {
             price = strToDbl(tempPrice);
@@ -1109,11 +1193,18 @@ int addStock(sqlite3 *db){
     } while (input != 1);
 
     do{
-        printf("Please enter the quantity of %s ", name);
+        printf("Please enter the quantity of  %s ", name);
         fgets(tempQuantity, 10, stdin);
         tempQuantity[strcspn(tempQuantity, "\n")] = 0;
         if(!(doubleCheck(tempQuantity))){
             input = 0;
+            if(strlen(tempQuantity) == 9){
+                int ch;
+                do {
+                    ch = getchar();
+                } while(ch != '\n');
+            }
+            printf("Please check your input \n");
         
         } else {
             quantity = strToDbl(tempQuantity);
@@ -1127,7 +1218,7 @@ int addStock(sqlite3 *db){
 
     name[strcspn(name, "\n")] = 0;
 
-    strcpy(tempProduct.name, name);
+    strncpy(tempProduct.name, name, sizeof(tempProduct.name));
     tempProduct.productID = getLastID(db) + 1;
     tempProduct.categoryID = categoryID;
     tempProduct.price = price;
@@ -1221,7 +1312,10 @@ void main(){
         printf("\n\nPlease choose the number for your perferred action: ");
         int userInput;
         scanf("%d", &userInput);
-        getchar();
+        int ch;
+        do{
+            ch = getchar();
+        } while(ch != '\n');
 
         printf("You have selected %d\n", userInput);
 
